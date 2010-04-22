@@ -49,6 +49,8 @@
 
 vtkStandardNewMacro(vtkAMRDualContour);
 
+vtkCxxSetObjectMacro(vtkAMRDualContour, Controller, vtkMultiProcessController);
+
 static int vtkAMRDualIsoEdgeToPointsTable[12][2] =
   { {0,1}, {1,3}, {2,3}, {0,2},
     {4,5}, {5,7}, {6,7}, {4,6},
@@ -608,7 +610,9 @@ vtkAMRDualContour::vtkAMRDualContour()
   this->EnableMultiProcessCommunication = 1;
   this->EnableMergePoints = 1;
   this->TriangulateCap = 1;
-  this->Controller = vtkMultiProcessController::GetGlobalController();
+
+  this->Controller = NULL;
+  this->SetController(vtkMultiProcessController::GetGlobalController());
 
   // Pipeline
   this->SetNumberOfOutputPorts(1);
@@ -628,15 +632,23 @@ vtkAMRDualContour::~vtkAMRDualContour()
     delete this->BlockLocator;
     this->BlockLocator = 0;
     }
+  this->SetController(NULL);
 }
 
 //----------------------------------------------------------------------------
 void vtkAMRDualContour::PrintSelf(ostream& os, vtkIndent indent)
 {
-  // TODO print state
   this->Superclass::PrintSelf(os,indent);
 
   os << indent << "IsoValue: " << this->IsoValue << endl;
+  os << indent << "EnableCapping: " << this->EnableCapping << endl;
+  os << indent << "EnableDegenerateCells: "
+     << this->EnableDegenerateCells << endl;
+  os << indent << "EnableMultiProcessCommunication: "
+     << this->EnableMultiProcessCommunication << endl;
+  os << indent << "EnableMergePoints: " << this->EnableMergePoints << endl;
+  os << indent << "TriangulateCap: " << this->TriangulateCap << endl;
+  os << indent << "SkipGhostCopy: " << this->SkipGhostCopy << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -718,8 +730,16 @@ int vtkAMRDualContour::RequestData(
 
   this->Helper = vtkAMRDualGridHelper::New();
   this->Helper->SetEnableDegenerateCells(this->EnableDegenerateCells);
-  this->Helper->SetEnableMultiProcessCommunication(this->EnableMultiProcessCommunication);
   this->Helper->SetSkipGhostCopy(this->SkipGhostCopy);
+  if (this->EnableMultiProcessCommunication)
+    {
+    this->Helper->SetController(this->Controller);
+    }
+  else
+    {
+    this->Helper->SetController(NULL);
+    }
+
   this->Helper->Initialize(hbdsInput, arrayNameToProcess);
 
   vtkPolyData* mesh = vtkPolyData::New();

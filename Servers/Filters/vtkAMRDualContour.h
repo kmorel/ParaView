@@ -96,6 +96,9 @@ public:
   vtkGetMacro(SkipGhostCopy,int);
   vtkBooleanMacro(SkipGhostCopy,int);
 
+  vtkGetObjectMacro(Controller, vtkMultiProcessController);
+  virtual void SetController(vtkMultiProcessController *);
+
 protected:
   vtkAMRDualContour();
   ~vtkAMRDualContour();
