@@ -16,10 +16,14 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkProcessModule.h"
 #include "vtkPVConfig.h" // Required to get build options for paraview
 #include "vtkPVMain.h" // For VTK_USE_MPI
+#include "vtkPVPlugin.h"
 #include "vtkPVServerOptions.h"
 #include "vtkSMApplication.h"
 #include "vtkSMProperty.h"
 #include "vtkToolkits.h" // For VTK_USE_MPI
+
+// Adds required externs.
+PV_PLUGIN_IMPORT_INIT(SLACTools)
 
 // forward declare the initialize function
 static void ParaViewInitializeInterpreter(vtkProcessModule* pm);
@@ -42,6 +46,7 @@ int main(int argc, char* argv[])
     vtkSMApplication* smapplication = vtkSMApplication::New();
     vtkSMProperty::SetCheckDomains(0);
     smapplication->Initialize();
+    PV_PLUGIN_IMPORT(SLACTools);
     ret = pvmain->Run(options);
     smapplication->Finalize();
     smapplication->Delete();
