@@ -7,6 +7,9 @@ GET_FILENAME_COMPONENT(source_dir ${CMAKE_CURRENT_LIST_FILE} PATH)
 SET(CMAKE_TOOLCHAIN_FILE "${source_dir}/JaguarToolchain.cmake"
   CACHE FILEPATH "")
 
+# Include the tryrun results.
+INCLUDE(${source_dir}/JaguarTryRunResults.cmake)
+
 # These special compiler commands are actually wrappers for compiling on CNL.
 SET(CMAKE_CXX_COMPILER CC CACHE STRING "")
 SET(CMAKE_C_COMPILER cc CACHE STRING "")
