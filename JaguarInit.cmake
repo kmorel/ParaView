@@ -1,8 +1,10 @@
 # Use this file in the -C flag of cmake to initialize the settings for
 # compiling on Jaguar.
 
+GET_FILENAME_COMPONENT(source_dir ${CMAKE_CURRENT_LIST_FILE} PATH)
+
 # The toolchain file
-SET(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/JaguarToolchain.cmake"
+SET(CMAKE_TOOLCHAIN_FILE "${source_dir}/JaguarToolchain.cmake"
   CACHE FILEPATH "")
 
 # These special compiler commands are actually wrappers for compiling on CNL.
