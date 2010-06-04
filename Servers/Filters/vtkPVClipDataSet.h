@@ -15,7 +15,8 @@
 // .NAME vtkPVClipDataSet - Clip filter
 //
 // .SECTION Description
-// This is a subclass of vtkTableBasedClipDataSet that allows selection of input scalars
+// This is a subclass of vtkTableBasedClipDataSet that allows selection of input
+// scalars.
 
 #ifndef __vtkPVClipDataSet_h
 #define __vtkPVClipDataSet_h
@@ -29,15 +30,39 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  static vtkPVClipDataSet *New();
+  static vtkPVClipDataSet* New();
 
+  virtual int ProcessRequest(vtkInformation*,
+                             vtkInformationVector**,
+                             vtkInformationVector*);
+//BTX
 protected:
   vtkPVClipDataSet(vtkImplicitFunction *cf=NULL);
   ~vtkPVClipDataSet();
 
+  virtual int RequestData(vtkInformation*,
+                          vtkInformationVector**, vtkInformationVector* );
+
+  virtual int RequestDataObject(vtkInformation*,
+                                vtkInformationVector**,
+                                vtkInformationVector*);
+
+
+  virtual int FillInputPortInformation(int, vtkInformation* info);
+  virtual int FillOutputPortInformation(int, vtkInformation* info);
+
+  // Description:
+  // Uses superclass to clip the input. This also handles composite datasets
+  // (since superclass does not handle composite datasets). This method loops
+  // over the composite dataset calling superclass repeatedly.
+  int ClipUsingSuperclass(
+    vtkInformation* request, vtkInformationVector** inputVector,
+    vtkInformationVector* outputVector);
+
 private:
   vtkPVClipDataSet(const vtkPVClipDataSet&);  // Not implemented.
   void operator=(const vtkPVClipDataSet&);  // Not implemented.
+//ETX
 };
 
 #endif

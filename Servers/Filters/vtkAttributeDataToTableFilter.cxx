@@ -25,6 +25,7 @@
 #include "vtkPointSet.h"
 #include "vtkRectilinearGrid.h"
 #include "vtkStructuredGrid.h"
+#include "vtkIdTypeArray.h"
 #include "vtkImageData.h"
 #include "vtkIntArray.h"
 
@@ -70,7 +71,7 @@ int vtkAttributeDataToTableFilter::RequestData(
   if (fieldData)
     {
     vtkTable* output = vtkTable::GetData(outputVector);
-    if (this->FieldAssociation == 
+    if (this->FieldAssociation ==
       vtkDataObject::FIELD_ASSOCIATION_NONE)
       {
       // Field data can have different length arrays, so we need to create
@@ -92,7 +93,7 @@ int vtkAttributeDataToTableFilter::RequestData(
       }
 
     if (this->AddMetaData &&
-      this->FieldAssociation != 
+      this->FieldAssociation !=
       vtkDataObject::FIELD_ASSOCIATION_NONE)
       {
       this->Decorate(output, input);
@@ -102,7 +103,7 @@ int vtkAttributeDataToTableFilter::RequestData(
 }
 
 //----------------------------------------------------------------------------
-void vtkAttributeDataToTableFilter::PassFieldData(vtkFieldData* output, 
+void vtkAttributeDataToTableFilter::PassFieldData(vtkFieldData* output,
   vtkFieldData* input)
 {
   output->DeepCopy(input);
@@ -217,7 +218,18 @@ void vtkAttributeDataToTableFilter::Decorate(vtkTable* output,
     dimensions = cellDims;
     }
 
-  if (this->FieldAssociation == vtkDataObject::FIELD_ASSOCIATION_POINTS &&
+  if (this->FieldAssociation == vtkDataObject::FIELD_ASSOCIATION_CELLS &&
+    input->GetNumberOfElements(vtkDataObject::CELL) > 0)
+    {
+      //at minimum always have cell ids
+      vtkIdTypeArray* originalIndices = vtkIdTypeArray::New();
+      originalIndices->SetNumberOfComponents(1);
+      originalIndices->SetNumberOfTuples( input->GetNumberOfElements(vtkDataObject::CELL));
+      originalIndices->SetName("vtkOriginalIndices");
+      output->GetRowData()->AddArray(originalIndices);
+      originalIndices->Delete();
+    }
+  else if (this->FieldAssociation == vtkDataObject::FIELD_ASSOCIATION_POINTS &&
     psInput && psInput->GetPoints())
     {
     output->GetRowData()->AddArray(psInput->GetPoints()->GetData());

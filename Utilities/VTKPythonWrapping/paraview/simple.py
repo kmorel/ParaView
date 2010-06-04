@@ -112,7 +112,10 @@ def OpenDataFile(filename, **extraArgs):
     prototype = servermanager.ProxyManager().GetPrototypeProxy(
       reader_factor.GetReaderGroup(), reader_factor.GetReaderName())
     xml_name = paraview.make_name_valid(prototype.GetXMLLabel())
-    reader = globals()[xml_name](FileName=filename, **extraArgs)
+    if prototype.GetProperty("FileNames"):
+      reader = globals()[xml_name](FileNames=filename, **extraArgs)
+    else :
+      reader = globals()[xml_name](FileName=filename, **extraArgs)
     return reader
 
 def GetRenderView():
@@ -190,6 +193,12 @@ def ResetCamera(view=None):
         view = active_objects.view
     view.ResetCamera()
     Render(view)
+
+def _DisableFirstRenderCameraReset():
+    """Disable the first render camera reset.  Normally a ResetCamera is called
+    automatically when Render is called for the first time after importing
+    this module."""
+    _funcs_internals.first_render = False
 
 def SetProperties(proxy=None, **params):
     """Sets one or more properties of the given pipeline object. If an argument

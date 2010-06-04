@@ -22,11 +22,9 @@ GET_PROPERTY(PV_TARGET_SUPPORTS_SHARED_LIBS
   GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
 
 #########################################################################
-# Clear the Plugin List text file
-SET(PARAVIEW_PLUGINLIST_TXT "${ParaView_BINARY_DIR}/PluginList.txt")
-FILE(WRITE ${PARAVIEW_PLUGINLIST_TXT} "")
-
-SET(PARAVIEW_PLUGIN_CONFIG_LIST "" CACHE INTERNAL "List of configured plugins.")
+# PARAVIEW_PLUGINLIST is used to generate the config file distributed with
+# ParaView that lists the plugins distributed with ParaView.
+SET(PARAVIEW_PLUGINLIST "" CACHE INTERNAL "List of configured plugins" FORCE)
 
 #########################################################################
 # Warn about ParaQ
@@ -234,6 +232,9 @@ SET (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${ParaView_CMAKE_DIR})
 SET(ParaView_QT_DIR ${ParaView_SOURCE_DIR}/Qt)
 SET(PARAVIEW_QT_QMAKE_EXECUTABLE ${QT_QMAKE_EXECUTABLE})
 
+# Check that the Git submodules have been initialized correctly
+INCLUDE(ParaViewCheckSubmodules)
+
 INCLUDE(ParaViewMacros)
 INCLUDE(ParaViewCommon)
 INCLUDE(ParaViewPlugins)
@@ -313,10 +314,7 @@ SET(PARAVIEW_SMTESTDRIVER_EXECUTABLE  ${EXECUTABLE_OUTPUT_PATH}/smTestDriver${PV
 # release/debug configuration gets considered.
 GET_TARGET_PROPERTY(PARAVIEW_PROCESS_XML_EXECUTABLE kwProcessXML LOCATION)
 
-#########################################################################
-# PARAVIEW_PLUGINLIST is used to generate the config file distributed with
-# ParaView that lists the plugins distributed with ParaView.
-SET(PARAVIEW_PLUGINLIST "" CACHE INTERNAL "List of configured plugins" FORCE)
+
 ADD_SUBDIRECTORY(Plugins)
 
 #########################################################################

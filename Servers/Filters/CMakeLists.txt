@@ -101,11 +101,15 @@ SET(Filters_SRCS
   vtkPVAnimationScene.cxx
   vtkPVArrayCalculator.cxx
   vtkPVArrowSource.cxx
+  vtkPVAxesActor.cxx
+  vtkPVAxesWidget.cxx
   vtkPVCacheKeeper.cxx
   vtkPVCacheKeeperPipeline.cxx
   vtkPVClientServerRenderManager.cxx
+  vtkPVClipClosedSurface.cxx
   vtkPVClipDataSet.cxx
   vtkPVConnectivityFilter.cxx
+  vtkPVContourFilter.cxx
   vtkPVDesktopDeliveryClient.cxx
   vtkPVDesktopDeliveryServer.cxx
   vtkPVDReader.cxx

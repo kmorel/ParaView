@@ -25,10 +25,32 @@
 #include "vtkGenericAttribute.h"
 #include "vtkPVGenericAttributeInformation.h"
 
+#include <string.h>
+#include <algorithm>
 #include <vtkstd/vector>
 
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkPVDataSetAttributesInformation);
+
+//----------------------------------------------------------------------------
+struct  vtkPVDataSetAttributesInformationSortArray
+{
+  int          arrayIndx;
+  const char * arrayName;
+};
+
+bool    vtkPVDataSetAttributesInfromationAlphabeticSorting
+( const vtkPVDataSetAttributesInformationSortArray & thisArray,
+  const vtkPVDataSetAttributesInformationSortArray & thatArray )
+{
+#if defined(_WIN32)
+  return  (  stricmp( thisArray.arrayName, thatArray.arrayName )  <=  0  )
+          ?  true  :  false;
+#else
+  return  (  strcasecmp( thisArray.arrayName, thatArray.arrayName )  <=  0  )
+          ?  true  :  false;
+#endif
+}
 
 //----------------------------------------------------------------------------
 vtkPVDataSetAttributesInformation::vtkPVDataSetAttributesInformation()
@@ -154,10 +176,31 @@ vtkPVDataSetAttributesInformation
 
   // Copy Point Data
   num = da->GetNumberOfArrays();
+
+  // sort the arrays alphabetically
+  int   arrayIndx = 0;
+  vtkstd::vector < vtkPVDataSetAttributesInformationSortArray > sortArays;
+  sortArays.clear();
+
+  if ( num > 0 )
+    {
+    sortArays.resize( num );
+    for ( int i = 0; i < num; i ++ )
+      {
+      sortArays[i].arrayIndx = i;
+      sortArays[i].arrayName = da->GetArrayName( i );
+      }
+
+    vtkstd::sort( sortArays.begin(), sortArays.end(),
+                  vtkPVDataSetAttributesInfromationAlphabeticSorting );
+    }
+
   infoArrayIndex = 0;
   for (idx = 0; idx < num; ++idx)
     {
-    vtkAbstractArray* const array = da->GetAbstractArray(idx);
+    arrayIndx = sortArays[idx].arrayIndx;
+    vtkAbstractArray* const array = da->GetAbstractArray( arrayIndx );
+
     if (array->GetName() && 
         strcmp(array->GetName(),"vtkGhostLevels") != 0 &&
         strcmp(array->GetName(), "vtkOriginalCellIds") != 0 &&
@@ -168,7 +211,7 @@ vtkPVDataSetAttributesInformation
       this->ArrayInformation->AddItem(info);
       info->Delete();
       // Record default attributes.
-      attribute = da->IsArrayAnAttribute(idx);
+      attribute = da->IsArrayAnAttribute( arrayIndx );
       if (attribute > -1)
         {
         this->AttributeIndices[attribute] = infoArrayIndex;
@@ -176,6 +219,8 @@ vtkPVDataSetAttributesInformation
       ++infoArrayIndex;
       }
     }
+
+  sortArays.clear();
 }
 
 //----------------------------------------------------------------------------

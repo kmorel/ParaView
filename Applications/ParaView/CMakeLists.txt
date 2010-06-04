@@ -63,6 +63,8 @@ build_paraview_client(paraview
       ${PARAVIEW_EXTRA_GUI_RESOURCES} # Add any compiled in GUI configuration xmls
     COMPRESSED_HELP_FILE "${ParaView_BINARY_DIR}/Documentation/paraview.qch"
     SOURCES ${ParaView_SOURCE_FILES}
+    INSTALL_BIN_DIR "${PV_INSTALL_BIN_DIR}"
+    INSTALL_LIB_DIR "${PV_INSTALL_LIB_DIR}"
 )
 
 # Configure the ".plugins" configuration xml for making paraview aware of the
@@ -133,7 +135,7 @@ ENDIF(_install_qt_libs)
 #------------------------------------------------------------------------
 # Install ffmpeg, if used.
 IF (VTK_USE_FFMPEG_ENCODER)
-  FOREACH(fmpglib avcodec avformat avutil)
+  FOREACH(fmpglib ${FFMPEG_BASIC_LIBRARIES})
     IF (FFMPEG_${fmpglib}_LIBRARY)
       pv_install_library(${FFMPEG_${fmpglib}_LIBRARY}
         ${PV_INSTALL_LIB_DIR}

@@ -62,21 +62,17 @@ if len(GetRepresentations()) or len(GetRenderViews()) or len(GetSources()):
     fail("Not all proxies were cleaned up.")
 
 # Compile the trace code and run it
-code = compile(trace_string, "python trace string", "exec")
+code = compile(trace_string, "<string>", "exec")
 exec(code)
 
 # Get the recreated proxies
-view = GetRenderViews()[1]
-view2 = GetRenderViews()[0] # ok this is a little weird, the views are in a different order
+view = GetRenderViews()[0]
+view2 = GetRenderViews()[1]
 sphere = FindSource("my sphere")
 glyph = FindSource("my glyph")
 clip = FindSource("my clip")
 group = FindSource("my group")
 
-print "background:", view.Background
-print "background2:", view2.Background
-print "representations:", view.Representations
-print "representations2:", view2.Representations
 
 # Test the results
 epsilon = 0.000001

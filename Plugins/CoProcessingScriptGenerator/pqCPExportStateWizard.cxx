@@ -31,21 +31,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ========================================================================*/
 #include "pqCPExportStateWizard.h"
 #include <QMessageBox>
-#include <QWizardPage>
 #include <QPointer>
-#include <QtDebug>
+#include <QRegExp>
+#include <QRegExpValidator>
+#include <QWizardPage>
 
-#include "pqPipelineFilter.h"
-#include "pqPipelineSource.h"
-#include "pqApplicationCore.h"
-#include "pqServerManagerModel.h"
-#include "pqPythonDialog.h"
-#include "pqPythonManager.h"
-#include "pqFileDialog.h"
+#include <pqApplicationCore.h>
+#include <pqFileDialog.h>
+#include <pqPipelineFilter.h>
+#include <pqPipelineSource.h>
+#include <pqPythonDialog.h>
+#include <pqPythonManager.h>
+#include <pqRenderView.h>
+#include <pqServerManagerModel.h>
 
 #include <vtkPVXMLElement.h>
 #include <vtkSMProxyManager.h>
 #include <vtkSMSourceProxy.h>
+#include <vtksys/SystemTools.hxx>
 
 extern const char* cp_export_py;
 
@@ -113,7 +116,6 @@ bool pqCPExportStateWizardPage2::isComplete() const
   return this->Internals->simulationInputs->count() > 0;
 }
 
-
 //-----------------------------------------------------------------------------
 void pqCPExportStateWizardPage3::initializePage()
 {
@@ -129,7 +131,6 @@ void pqCPExportStateWizardPage3::initializePage()
     QTableWidgetItem* tableItem = this->Internals->nameWidget->item(cc, 1);
     tableItem->setFlags(tableItem->flags()|Qt::ItemIsEditable);
 
-
     tableItem = this->Internals->nameWidget->item(cc, 0);
     tableItem->setFlags(tableItem->flags() & ~Qt::ItemIsEditable);
     }
@@ -144,7 +145,15 @@ pqCPExportStateWizard::pqCPExportStateWizard(
   this->Internals = new pqInternals();
   this->Internals->setupUi(this);
   ::ActiveWizard = NULL;
+  //this->setWizardStyle(ModernStyle);
   this->setOption(QWizard::NoCancelButton, false);
+  this->Internals->imageFileName->hide();
+  this->Internals->imageType->hide();
+  this->Internals->imageWriteFrequency->hide();
+
+  this->Internals->imageFileNameLabel->hide();
+  this->Internals->imageTypeLabel->hide();
+  this->Internals->imageWriteFrequencyLabel->hide();
 
   QObject::connect(this->Internals->allInputs, SIGNAL(itemSelectionChanged()),
     this, SLOT(updateAddRemoveButton()));
@@ -154,6 +163,34 @@ pqCPExportStateWizard::pqCPExportStateWizard(
     this, SLOT(onAdd()));
   QObject::connect(this->Internals->removeButton, SIGNAL(clicked()),
     this, SLOT(onRemove()));
+
+  QObject::connect(this->Internals->outputRendering, SIGNAL(toggled(bool)),
+                   this->Internals->imageType, SLOT(setVisible(bool)));
+  QObject::connect(this->Internals->outputRendering, SIGNAL(toggled(bool)),
+                   this->Internals->imageFileName, SLOT(setVisible(bool)));
+  QObject::connect(this->Internals->outputRendering, SIGNAL(toggled(bool)),
+                   this->Internals->imageWriteFrequency, SLOT(setVisible(bool)));
+
+  QObject::connect(this->Internals->outputRendering, SIGNAL(toggled(bool)),
+                   this->Internals->imageTypeLabel, SLOT(setVisible(bool)));
+  QObject::connect(this->Internals->outputRendering, SIGNAL(toggled(bool)),
+                   this->Internals->imageFileNameLabel, SLOT(setVisible(bool)));
+  QObject::connect(this->Internals->outputRendering, SIGNAL(toggled(bool)),
+                   this->Internals->imageWriteFrequencyLabel, SLOT(setVisible(bool)));
+
+  pqServerManagerModel* smModel = pqApplicationCore::instance()->getServerManagerModel();
+  this->NumberOfViews = smModel->getNumberOfItems<pqRenderView*>();
+  if(this->NumberOfViews > 1)
+    {
+    this->Internals->imageFileName->setText("image_%v_%t.png");
+    }
+  QObject::connect(
+    this->Internals->imageFileName, SIGNAL(editingFinished()),
+    this, SLOT(updateImageFileName()));
+
+  QObject::connect(
+    this->Internals->imageType, SIGNAL(currentIndexChanged(const QString&)),
+    this, SLOT(updateImageFileNameExtension(const QString&)));
 }
 
 //-----------------------------------------------------------------------------
@@ -181,7 +218,8 @@ void pqCPExportStateWizard::onAdd()
     delete this->Internals->allInputs->takeItem(
       this->Internals->allInputs->row(item));
     }
-  dynamic_cast<pqCPExportStateWizardPage2*>(this->currentPage())->emitCompleteChanged();
+  dynamic_cast<pqCPExportStateWizardPage2*>(
+    this->currentPage())->emitCompleteChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -198,6 +236,54 @@ void pqCPExportStateWizard::onRemove()
 }
 
 //-----------------------------------------------------------------------------
+void pqCPExportStateWizard::updateImageFileName()
+{
+  QString fileName = this->Internals->imageFileName->displayText();
+  if(fileName.isNull() || fileName.isEmpty())
+    {
+    fileName = "image";
+    }
+  QRegExp regExp("\\.(png|bmp|ppm|tif|tiff|jpg|jpeg)$");
+  if(fileName.contains(regExp) == 0)
+    {
+    fileName.append(".");
+    fileName.append(this->Internals->imageType->currentText());
+    }
+  else
+    {  // update imageType if it is different
+    int extensionIndex = fileName.lastIndexOf(".");
+    QString extension = fileName.right(fileName.size()-extensionIndex-1);
+    int index = this->Internals->imageType->findText(extension);
+    this->Internals->imageType->setCurrentIndex(index);
+    fileName = this->Internals->imageFileName->displayText();
+    }
+
+  if(this->NumberOfViews > 1 && fileName.contains("%v") == 0)
+    {
+    fileName.insert(fileName.lastIndexOf("."), "_%v");
+    }
+  if(fileName.contains("%t") == 0)
+    {
+    fileName.insert(fileName.lastIndexOf("."), "_%t");
+    }
+
+  this->Internals->imageFileName->setText(fileName);
+}
+
+//-----------------------------------------------------------------------------
+void pqCPExportStateWizard::updateImageFileNameExtension(
+  const QString& fileExtension)
+{
+  QString displayText = this->Internals->imageFileName->text();
+  vtkstd::string newFileName = vtksys::SystemTools::GetFilenameWithoutExtension(
+    displayText.toLocal8Bit().constData());
+
+  newFileName.append(".");
+  newFileName.append(fileExtension.toLocal8Bit().constData());
+  this->Internals->imageFileName->setText(QString::fromStdString(newFileName));
+}
+
+//-----------------------------------------------------------------------------
 bool pqCPExportStateWizard::validateCurrentPage()
 {
   if (!this->Superclass::validateCurrentPage())
@@ -211,14 +297,17 @@ bool pqCPExportStateWizard::validateCurrentPage()
     return true;
     }
 
+  QString image_file_name("");
+  int image_write_frequency = 0;
   QString export_rendering = "True";
-  if (this->Internals->ignoreRendering->isChecked())
+  if (this->Internals->outputRendering->isChecked() == 0)
     {
     export_rendering = "False";
     // check to make sure that there is a writer hooked up since we aren't
     // exporting an image
     vtkSMProxyManager* proxyManager = vtkSMProxyManager::GetProxyManager();
-    pqServerManagerModel* smModel = pqApplicationCore::instance()->getServerManagerModel();
+    pqServerManagerModel* smModel =
+      pqApplicationCore::instance()->getServerManagerModel();
     bool haveSomeWriters = false;
     QStringList filtersWithoutConsumers;
     for(unsigned int i=0;i<proxyManager->GetNumberOfProxies("sources");i++)
@@ -244,7 +333,7 @@ bool pqCPExportStateWizard::validateCurrentPage()
     if(!haveSomeWriters)
       {
       QMessageBox messageBox;
-      QString message(tr("No output writers specified. Either add writers in the pipeline or uncheck <b>Ignore rendering components</b>."));
+      QString message(tr("No output writers specified. Either add writers in the pipeline or check <b>Output rendering components</b>."));
       messageBox.setText(message);
       messageBox.exec();
       return false;
@@ -263,6 +352,11 @@ bool pqCPExportStateWizard::validateCurrentPage()
       messageBox.setText(message);
       messageBox.exec();
       }
+    }
+  else // we are creating an image so we need to get the proper information from there
+    {
+    image_file_name = this->Internals->imageFileName->text();
+    image_write_frequency = this->Internals->imageWriteFrequency->value();
     }
 
   QString filters ="ParaView Python State Files (*.py);;All files (*)";
@@ -302,12 +396,10 @@ bool pqCPExportStateWizard::validateCurrentPage()
     }
   // remove last ","
   sim_inputs_map.chop(1);
-  
-  QString command =
-    QString(cp_export_py).arg(export_rendering).arg(sim_inputs_map).arg(filename);
 
-  //cout << command.toStdString() << endl;
-  
+  QString command =
+    QString(cp_export_py).arg(export_rendering).arg(sim_inputs_map).arg(image_file_name).arg(image_write_frequency).arg(filename);
+
   dialog->runString(command);
   return true;
 }

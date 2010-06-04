@@ -34,6 +34,7 @@ vtkSMFieldDataDomain::vtkSMFieldDataDomain()
 {
   this->EnableFieldDataSelection = false;
   this->DisableUpdateDomainEntries = false;
+  this->ForcePointAndCellDataSelection = false;
   this->DefaultValue = -1;
 }
 
@@ -46,7 +47,7 @@ vtkSMFieldDataDomain::~vtkSMFieldDataDomain()
 int vtkSMFieldDataDomain::CheckForArray(
   vtkSMSourceProxy* sp,
   int outputport,
-  vtkPVDataSetAttributesInformation* info, 
+  vtkPVDataSetAttributesInformation* info,
   vtkSMInputArrayDomain* iad)
 {
   int num = info->GetNumberOfArrays();
@@ -61,7 +62,7 @@ int vtkSMFieldDataDomain::CheckForArray(
 }
 
 //---------------------------------------------------------------------------
-void vtkSMFieldDataDomain::Update(vtkSMSourceProxy* sp, 
+void vtkSMFieldDataDomain::Update(vtkSMSourceProxy* sp,
                                   vtkSMInputArrayDomain* iad,
                                   int outputport)
 {
@@ -85,11 +86,19 @@ void vtkSMFieldDataDomain::Update(vtkSMSourceProxy* sp,
   bool has_rd = 0 !=
     this->CheckForArray(sp, outputport, info->GetRowDataInformation(), iad);
 
-  if (this->DisableUpdateDomainEntries || has_pd)
+  if ( this->ForcePointAndCellDataSelection &&
+    !(has_vd || has_ed || has_rd ) )
+    {
+    //only force cell & data on DataSets
+    has_pd = ( info->GetNumberOfPoints() > 0);
+    has_cd = ( info->GetNumberOfCells() > 0);
+    }
+
+  if (this->DisableUpdateDomainEntries || has_pd )
     {
     this->AddEntry("Point Data", vtkDataObject::FIELD_ASSOCIATION_POINTS);
     }
-  if (this->DisableUpdateDomainEntries || has_cd)
+  if (this->DisableUpdateDomainEntries || has_cd )
     {
     this->AddEntry("Cell Data",  vtkDataObject::FIELD_ASSOCIATION_CELLS);
     }
@@ -140,11 +149,12 @@ void vtkSMFieldDataDomain::Update(vtkSMSourceProxy* sp,
     this->DefaultValue = vtkDataObject::FIELD_ASSOCIATION_NONE;
     }
 
+
   this->InvokeModified();
 }
 
 //---------------------------------------------------------------------------
-void vtkSMFieldDataDomain::Update(vtkSMProxyProperty* pp, 
+void vtkSMFieldDataDomain::Update(vtkSMProxyProperty* pp,
                                   vtkSMSourceProxy* sp,
                                   int outputport)
 {
@@ -185,11 +195,11 @@ void vtkSMFieldDataDomain::Update(vtkSMProperty*)
 
   for (i=0; i<numProxs; i++)
     {
-    vtkSMSourceProxy* sp = 
+    vtkSMSourceProxy* sp =
       vtkSMSourceProxy::SafeDownCast(pp->GetUncheckedProxy(i));
     if (sp)
       {
-      this->Update(pp, sp, 
+      this->Update(pp, sp,
         (ip? ip->GetUncheckedOutputPortForConnection(i):0));
       return;
       }
@@ -200,7 +210,7 @@ void vtkSMFieldDataDomain::Update(vtkSMProperty*)
   numProxs = pp->GetNumberOfProxies();
   for (i=0; i<numProxs; i++)
     {
-    vtkSMSourceProxy* sp = 
+    vtkSMSourceProxy* sp =
       vtkSMSourceProxy::SafeDownCast(pp->GetProxy(i));
     if (sp)
       {
@@ -243,8 +253,18 @@ int vtkSMFieldDataDomain::ReadXMLAttributes(
   if (element->GetScalarAttribute("disable_update_domain_entries",
       &disable_update_domain_entries))
     {
-    this->DisableUpdateDomainEntries = (disable_update_domain_entries!=0)? true : false;
+    this->DisableUpdateDomainEntries =
+      (disable_update_domain_entries!=0)? true : false;
     }
+
+  int force_point_cell_data =0;
+  if (element->GetScalarAttribute("force_point_cell_data",
+    &force_point_cell_data))
+    {
+    this->ForcePointAndCellDataSelection =
+      ( force_point_cell_data!=0) ? true : false;
+    }
+
 
   if (this->DisableUpdateDomainEntries)
     {
